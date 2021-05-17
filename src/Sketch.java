@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 public class Sketch extends PApplet {
 
@@ -14,6 +15,7 @@ public class Sketch extends PApplet {
 
     private float scale = 1;
     private float speed = 1;
+    private float iterationsPerFrame = 1;
     private float posX = 0;
     private float posY = 0;
 
@@ -36,13 +38,36 @@ public class Sketch extends PApplet {
         handlePressedKeys();
 
         background(0);
+        drawText();
+
         translate(width / 2f, height / 2f);
         scale(scale);
         translate(posX, posY);
 
         bodies.forEach(body -> body.draw(this));
 
-        // Wyznaczenie przyspieszen
+        for (int i = 0; i < iterationsPerFrame; i++) {
+            calculateVelocities();
+            moveBodies();
+            handleInelasticCollisions();
+        }
+    }
+
+    private void drawText() {
+        float r = 100;
+        int textX = 10;
+        int[] textY = IntStream.range(0, 10)
+                .map(i -> 25 + 20 * i)
+                .toArray();
+
+        textSize(20);
+        text("Iterations per frame: " + round(iterationsPerFrame), textX, textY[0]);
+        text("Number of bodies: " + bodies.size(), textX, textY[1]);
+        text("Speed: " + round(speed * r) / r, textX, textY[2]);
+        text("Scale: " + round(scale * r) / r, textX, textY[3]);
+    }
+
+    private void calculateVelocities() {
         for (int i = 0; i < bodies.size(); i++) {
             Body body = bodies.get(i);
             body.setAcceleration(new PVector(0, 0, 0));
@@ -54,19 +79,28 @@ public class Sketch extends PApplet {
                     PVector posB = secBody.getPosition().copy();
 
                     float force = G * secBody.getMass() / (float) Math.pow(posA.dist(posB), 3);
+                    force = min(10, force);
                     PVector acceleration = (posB.sub(posA)).mult(force);
                     body.getAcceleration().add(acceleration);
                 }
             }
         }
+    }
 
-        // Ruch
+    private void moveBodies() {
         for (Body body : bodies) {
-            body.getVelocity().add(body.getAcceleration());
-            body.getPosition().add(body.getVelocity().copy().mult(speed).add(body.getAcceleration().mult(speed / 2)));
-        }
+            body.getVelocity().add(body.getAcceleration().copy().div(iterationsPerFrame));
 
-        // Obsluga kolizji
+            float t = speed * 1 / iterationsPerFrame;
+
+            PVector v0t = body.getVelocity().copy().mult(t);
+            PVector at2 = body.getAcceleration().mult(t * t);
+
+            body.getPosition().add(v0t).add(at2.div(2));
+        }
+    }
+
+    private void handleInelasticCollisions() {
         for (int i = 0; i < bodies.size(); i++) {
             for (int j = i + 1; j < bodies.size(); j++) {
                 Body a = bodies.get(i);
@@ -101,12 +135,10 @@ public class Sketch extends PApplet {
         if (pressedKeys.contains('-')) scale /= 1.02;
 
         if (pressedKeys.contains(']')) speed += 0.1;
-        if (pressedKeys.contains('[')) {
-            speed -= 0.1;
-            if (speed < 0.1) {
-                speed = 0.1f;
-            }
-        }
+        if (pressedKeys.contains('[')) speed = max(speed - 0.1f, 0.1f);
+
+        if (pressedKeys.contains('.')) iterationsPerFrame += 1;
+        if (pressedKeys.contains(',')) iterationsPerFrame = max(iterationsPerFrame - 1, 1);
 
         if (pressedKeys.contains('w')) posY += 10 / scale;
         if (pressedKeys.contains('s')) posY -= 10 / scale;
