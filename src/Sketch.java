@@ -9,9 +9,11 @@ import java.util.stream.IntStream;
 
 public class Sketch extends PApplet {
 
+    private final float SOFTENING = 10;
+    private final float G = 6.67f * pow(10, -11) * 1_000_000_000;
+
     private List<Body> bodies = new ArrayList<>();
     private Set<Character> pressedKeys = new HashSet<>();
-    private final float G = 0.5f;
 
     private float scale = 1;
     private float speed = 1;
@@ -26,13 +28,16 @@ public class Sketch extends PApplet {
     public void setup() {
         frameRate(60);
 
-        for (int i = 0; i < 200; i++) {
-            PVector position = PVector.random2D().mult(random(10, 1500));
-            PVector velocity = PVector.random2D().mult(random(3) / 10);
-            System.out.println(position + " " + velocity);
-            bodies.add(new Body(position, velocity, random(10, 30)));
-        }
+        textSize(20);
+        textFont(createFont("Ubuntu Mono", 20, true));
+
+        BodyCreator creator = new BodyCreator();
+        creator.generateRandom(20);
+
+        //creator.readFromFile("data/bodies.txt");
+        bodies.addAll(creator.getBodies());
     }
+
 
     public void draw() {
         handlePressedKeys();
@@ -44,7 +49,7 @@ public class Sketch extends PApplet {
         scale(scale);
         translate(posX, posY);
 
-        bodies.forEach(body -> body.draw(this));
+        bodies.forEach(body -> body.draw(this, true));
 
         for (int i = 0; i < iterationsPerFrame; i++) {
             calculateVelocities();
@@ -60,11 +65,11 @@ public class Sketch extends PApplet {
                 .map(i -> 25 + 20 * i)
                 .toArray();
 
-        textSize(20);
-        text("Iterations per frame: " + round(iterationsPerFrame), textX, textY[0]);
+        text("(<>)Iterations per frame: " + round(iterationsPerFrame), textX, textY[0]);
         text("Number of bodies: " + bodies.size(), textX, textY[1]);
-        text("Speed: " + round(speed * r) / r, textX, textY[2]);
-        text("Scale: " + round(scale * r) / r, textX, textY[3]);
+        text("([]) Speed: " + round(speed * r) / r, textX, textY[2]);
+        text("(-+) Scale: " + round(scale * r) / r, textX, textY[3]);
+        text("FPS: " + round(frameRate), textX, textY[4]);
     }
 
     private void calculateVelocities() {
@@ -78,8 +83,9 @@ public class Sketch extends PApplet {
                     PVector posA = body.getPosition().copy();
                     PVector posB = secBody.getPosition().copy();
 
-                    float force = G * secBody.getMass() / (float) Math.pow(posA.dist(posB), 3);
-                    force = min(10, force);
+                    float softenedR = sqrt(pow(posA.dist(posB), 2) + pow(SOFTENING, 2));
+                    float force = G * secBody.getMass() / (float) Math.pow(softenedR, 3);
+
                     PVector acceleration = (posB.sub(posA)).mult(force);
                     body.getAcceleration().add(acceleration);
                 }
@@ -89,14 +95,12 @@ public class Sketch extends PApplet {
 
     private void moveBodies() {
         for (Body body : bodies) {
-            body.getVelocity().add(body.getAcceleration().copy().div(iterationsPerFrame));
+            float t = speed / iterationsPerFrame;
 
-            float t = speed * 1 / iterationsPerFrame;
+            body.getVelocity().add(body.getAcceleration().copy().mult(t));
+            PVector vt = body.getVelocity().copy().mult(t);
 
-            PVector v0t = body.getVelocity().copy().mult(t);
-            PVector at2 = body.getAcceleration().mult(t * t);
-
-            body.getPosition().add(v0t).add(at2.div(2));
+            body.getPosition().add(vt);
         }
     }
 
@@ -115,7 +119,7 @@ public class Sketch extends PApplet {
                     b = bodies.get(i);
                 }
 
-                if (a.getPosition().dist(b.getPosition()) < (a.getRadius() + b.getRadius()) * 0.7) {
+                if (a.getPosition().dist(b.getPosition()) < (a.getRadius() + b.getRadius() / 4)) {
                     PVector momentumA = a.getVelocity().mult(a.getMass());
                     PVector momentumB = b.getVelocity().mult(b.getMass());
 

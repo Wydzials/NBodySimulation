@@ -1,6 +1,8 @@
 import processing.core.PApplet;
 import processing.core.PVector;
 
+import java.awt.*;
+
 public class Body {
     private PVector position;
     private PVector velocity;
@@ -16,10 +18,35 @@ public class Body {
         acceleration = new PVector();
     }
 
-    public void draw(Sketch sketch) {
+    public void draw(Sketch sketch, boolean drawVectors) {
         sketch.fill(180);
         sketch.stroke(180);
-        sketch.circle(position.x, position.y, getRadius()*2);
+        sketch.circle(position.x, position.y, getRadius() * 2);
+
+        if (drawVectors) {
+            drawVector(velocity, sketch, Color.BLUE, 100);
+            drawVector(acceleration, sketch, Color.RED, 5000);
+        }
+    }
+
+    private void drawVector(PVector vector, PApplet sketch, Color color, int multiplier) {
+        float limit = PApplet.sqrt(vector.mag());
+        vector = vector.copy()
+                .limit(limit)
+                .mult(multiplier);
+
+        float x2 = (position.x + vector.x);
+        float y2 = (position.y + vector.y);
+
+        sketch.stroke(color.getRed(), color.getGreen(), color.getBlue());
+        sketch.line(position.x, position.y, x2, y2);
+
+        PVector arrowRight = new PVector(x2 - position.x, y2 - position.y);
+        arrowRight.normalize().mult(5).rotate(2.5f);
+        PVector arrowLeft = arrowRight.copy().rotate(-5f);
+
+        sketch.line(x2, y2, x2 + arrowRight.x, y2 + arrowRight.y);
+        sketch.line(x2, y2, x2 + arrowLeft.x, y2 + arrowLeft.y);
     }
 
     public PVector getPosition() {
@@ -63,6 +90,6 @@ public class Body {
     }
 
     public float getRadius() {
-        return 4 * PApplet.sqrt(mass / PApplet.PI);
+        return 4 * PApplet.sqrt(mass / 10 / PApplet.PI);
     }
 }
