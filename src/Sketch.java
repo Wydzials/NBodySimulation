@@ -20,6 +20,10 @@ public class Sketch extends PApplet {
     private float iterationsPerFrame = 1;
     private float posX = 0;
     private float posY = 0;
+    private boolean pause = false;
+
+    private boolean drawVelocities = false;
+    private boolean drawAccelerations = false;
 
     public void settings() {
         size(1500, 1000);
@@ -32,9 +36,8 @@ public class Sketch extends PApplet {
         textFont(createFont("Ubuntu Mono", 20, true));
 
         BodyCreator creator = new BodyCreator();
-        creator.generateRandom(20);
+        creator.generateRandom(200);
 
-        //creator.readFromFile("data/bodies.txt");
         bodies.addAll(creator.getBodies());
     }
 
@@ -43,18 +46,23 @@ public class Sketch extends PApplet {
         handlePressedKeys();
 
         background(0);
+        fill(220);
+
         drawText();
 
         translate(width / 2f, height / 2f);
         scale(scale);
         translate(posX, posY);
 
-        bodies.forEach(body -> body.draw(this, true));
+        strokeWeight(2 / scale);
+        bodies.forEach(body -> body.draw(this, drawVelocities, drawAccelerations));
 
-        for (int i = 0; i < iterationsPerFrame; i++) {
-            calculateVelocities();
-            moveBodies();
-            handleInelasticCollisions();
+        if (!pause) {
+            for (int i = 0; i < iterationsPerFrame; i++) {
+                calculateVelocities();
+                moveBodies();
+                handleInelasticCollisions();
+            }
         }
     }
 
@@ -65,11 +73,15 @@ public class Sketch extends PApplet {
                 .map(i -> 25 + 20 * i)
                 .toArray();
 
-        text("(<>)Iterations per frame: " + round(iterationsPerFrame), textX, textY[0]);
-        text("Number of bodies: " + bodies.size(), textX, textY[1]);
-        text("([]) Speed: " + round(speed * r) / r, textX, textY[2]);
-        text("(-+) Scale: " + round(scale * r) / r, textX, textY[3]);
-        text("FPS: " + round(frameRate), textX, textY[4]);
+        text("Number of bodies: " + bodies.size(), width - 220, textY[0]);
+        text("FPS: " + round(frameRate), width - 90, textY[1]);
+
+        text("(<>) iterations per frame: " + round(iterationsPerFrame), textX, textY[0]);
+        text("(1) draw velocities: " + drawVelocities, textX, textY[1]);
+        text("(2) draw accelerations: " + drawAccelerations, textX, textY[2]);
+        text("(space) paused: " + pause, textX, textY[3]);
+        text("([]) speed: " + round(speed * r) / r, textX, textY[4]);
+        text("(-+) scale: " + round(scale * r) / r, textX, textY[5]);
     }
 
     private void calculateVelocities() {
@@ -152,6 +164,9 @@ public class Sketch extends PApplet {
 
     public void keyPressed() {
         pressedKeys.add(key);
+        if (key == ' ') pause = !pause;
+        if (key == '1') drawVelocities = !drawVelocities;
+        if (key == '2') drawAccelerations = !drawAccelerations;
     }
 
     public void keyReleased() {

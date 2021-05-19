@@ -18,13 +18,15 @@ public class Body {
         acceleration = new PVector();
     }
 
-    public void draw(Sketch sketch, boolean drawVectors) {
+    public void draw(Sketch sketch, boolean drawVelocity, boolean drawAcceleration) {
         sketch.fill(180);
         sketch.stroke(180);
         sketch.circle(position.x, position.y, getRadius() * 2);
 
-        if (drawVectors) {
+        if (drawVelocity) {
             drawVector(velocity, sketch, Color.BLUE, 100);
+        }
+        if (drawAcceleration) {
             drawVector(acceleration, sketch, Color.RED, 5000);
         }
     }
