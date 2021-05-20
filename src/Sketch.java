@@ -24,6 +24,7 @@ public class Sketch extends PApplet {
 
     private boolean drawVelocities = false;
     private boolean drawAccelerations = false;
+    private boolean drawTrajectories = false;
 
     public void settings() {
         size(1500, 1000);
@@ -36,7 +37,7 @@ public class Sketch extends PApplet {
         textFont(createFont("Ubuntu Mono", 20, true));
 
         BodyCreator creator = new BodyCreator();
-        creator.generateRandom(200);
+        creator.readFromFile("data/3-bodies.txt");
 
         bodies.addAll(creator.getBodies());
     }
@@ -55,13 +56,29 @@ public class Sketch extends PApplet {
         translate(posX, posY);
 
         strokeWeight(2 / scale);
-        bodies.forEach(body -> body.draw(this, drawVelocities, drawAccelerations));
+
+        if (drawTrajectories) {
+            bodies.forEach(body -> body.getTrajectory().draw(this));
+            if (!pause && frameCount % 2 == 0) {
+                bodies.forEach(Body::updateTrajectory);
+            }
+        }
+
+        bodies.forEach(body -> body.draw(this));
+
+        if (drawVelocities) {
+            bodies.forEach(body -> body.drawVelocity(this));
+        }
+
+        if (drawAccelerations) {
+            bodies.forEach(body -> body.drawAcceleration(this));
+        }
 
         if (!pause) {
             for (int i = 0; i < iterationsPerFrame; i++) {
                 calculateVelocities();
                 moveBodies();
-                handleInelasticCollisions();
+                //handleInelasticCollisions();
             }
         }
     }
@@ -77,11 +94,12 @@ public class Sketch extends PApplet {
         text("FPS: " + round(frameRate), width - 90, textY[1]);
 
         text("(<>) iterations per frame: " + round(iterationsPerFrame), textX, textY[0]);
-        text("(1) draw velocities: " + drawVelocities, textX, textY[1]);
-        text("(2) draw accelerations: " + drawAccelerations, textX, textY[2]);
-        text("(space) paused: " + pause, textX, textY[3]);
-        text("([]) speed: " + round(speed * r) / r, textX, textY[4]);
-        text("(-+) scale: " + round(scale * r) / r, textX, textY[5]);
+        text("(1) show velocities: " + drawVelocities, textX, textY[1]);
+        text("(2) show accelerations: " + drawAccelerations, textX, textY[2]);
+        text("(3) show trajectories: " + drawTrajectories, textX, textY[3]);
+        text("(space) paused: " + pause, textX, textY[4]);
+        text("([]) speed: " + round(speed * r) / r, textX, textY[5]);
+        text("(-+) scale: " + round(scale * r) / r, textX, textY[6]);
     }
 
     private void calculateVelocities() {
@@ -150,8 +168,8 @@ public class Sketch extends PApplet {
         if (pressedKeys.contains('=')) scale *= 1.02;
         if (pressedKeys.contains('-')) scale /= 1.02;
 
-        if (pressedKeys.contains(']')) speed += 0.1;
-        if (pressedKeys.contains('[')) speed = max(speed - 0.1f, 0.1f);
+        if (pressedKeys.contains(']')) speed *= 1.01;
+        if (pressedKeys.contains('[')) speed = max(speed /= 1.01f, 0.1f);
 
         if (pressedKeys.contains('.')) iterationsPerFrame += 1;
         if (pressedKeys.contains(',')) iterationsPerFrame = max(iterationsPerFrame - 1, 1);
@@ -167,6 +185,10 @@ public class Sketch extends PApplet {
         if (key == ' ') pause = !pause;
         if (key == '1') drawVelocities = !drawVelocities;
         if (key == '2') drawAccelerations = !drawAccelerations;
+        if (key == '3') {
+            drawTrajectories = !drawTrajectories;
+            bodies.forEach(body -> body.getTrajectory().clear());
+        }
     }
 
     public void keyReleased() {

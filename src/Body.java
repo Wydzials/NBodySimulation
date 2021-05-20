@@ -4,12 +4,14 @@ import processing.core.PVector;
 import java.awt.*;
 
 public class Body {
+
     private PVector position;
     private PVector velocity;
     private PVector acceleration;
     private float mass;
 
     private boolean removed = false;
+    private Trajectory trajectory = new Trajectory();
 
     public Body(PVector position, PVector velocity, float mass) {
         this.position = position;
@@ -18,17 +20,26 @@ public class Body {
         acceleration = new PVector();
     }
 
-    public void draw(Sketch sketch, boolean drawVelocity, boolean drawAcceleration) {
-        sketch.fill(180);
-        sketch.stroke(180);
+    public void draw(Sketch sketch) {
+        sketch.fill(221, 224, 18);
+        sketch.stroke(221, 224, 18);
         sketch.circle(position.x, position.y, getRadius() * 2);
+    }
 
-        if (drawVelocity) {
-            drawVector(velocity, sketch, Color.BLUE, 100);
-        }
-        if (drawAcceleration) {
-            drawVector(acceleration, sketch, Color.RED, 5000);
-        }
+    public void updateTrajectory() {
+        trajectory.update(position);
+    }
+
+    public Trajectory getTrajectory() {
+        return trajectory;
+    }
+
+    public void drawVelocity(PApplet sketch) {
+        drawVector(velocity, sketch, Color.BLUE, 200);
+    }
+
+    public void drawAcceleration(PApplet sketch) {
+        drawVector(acceleration, sketch, Color.RED, 3000);
     }
 
     private void drawVector(PVector vector, PApplet sketch, Color color, int multiplier) {
@@ -44,7 +55,7 @@ public class Body {
         sketch.line(position.x, position.y, x2, y2);
 
         PVector arrowRight = new PVector(x2 - position.x, y2 - position.y);
-        arrowRight.normalize().mult(5).rotate(2.5f);
+        arrowRight.normalize().mult(8).rotate(2.5f);
         PVector arrowLeft = arrowRight.copy().rotate(-5f);
 
         sketch.line(x2, y2, x2 + arrowRight.x, y2 + arrowRight.y);

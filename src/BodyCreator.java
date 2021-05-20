@@ -23,7 +23,7 @@ public class BodyCreator {
             List<String[]> bodyLines = Files.lines(Path.of(path))
                     .filter(s -> !s.startsWith("#"))
                     .map(s -> s.split(" "))
-                    .filter(strings -> strings.length == 7 || strings.length == 4)
+                    .filter(strings -> strings.length == 5 || strings.length == 3)
                     .collect(Collectors.toList());
 
             for (String[] bodyLine : bodyLines) {
@@ -31,16 +31,16 @@ public class BodyCreator {
                         .map(Float::parseFloat)
                         .collect(Collectors.toList());
 
-                PVector position = new PVector(parsed.get(0), parsed.get(1), parsed.get(2));
+                PVector position = new PVector(parsed.get(0), parsed.get(1), 0);
                 PVector velocity;
                 float mass;
 
-                if (parsed.size() == 7) {
-                    velocity = new PVector(parsed.get(3), parsed.get(4), parsed.get(5));
-                    mass = parsed.get(6);
+                if (parsed.size() == 5) {
+                    velocity = new PVector(parsed.get(2), parsed.get(3), 0);
+                    mass = parsed.get(4);
                 } else {
                     velocity = new PVector();
-                    mass = parsed.get(3);
+                    mass = parsed.get(2);
                 }
 
                 bodies.add(new Body(position, velocity, mass));
