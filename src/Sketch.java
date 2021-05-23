@@ -1,14 +1,14 @@
 import processing.core.PApplet;
 import processing.core.PVector;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.IntStream;
 
-public class Sketch extends PApplet {
+import static java.lang.Math.pow;
+import static java.lang.Math.sqrt;
 
+public class Sketch extends PApplet {
+    //Liczba wątków z liczbą ciał się nie zgadza
     private final float SOFTENING = 10;
     private final float G = 6.67f * pow(10, -11) * 1_000_000_000;
 
@@ -21,6 +21,7 @@ public class Sketch extends PApplet {
     private float posX = 0;
     private float posY = 0;
     private boolean pause = false;
+    private final int numOfThread = 8;
 
     private boolean drawVelocities = false;
     private boolean drawAccelerations = false;
@@ -76,9 +77,10 @@ public class Sketch extends PApplet {
 
         if (!pause) {
             for (int i = 0; i < iterationsPerFrame; i++) {
-                calculateVelocities();
-                moveBodies();
-                //handleInelasticCollisions();
+                int[] indexArr = createBodiesIndexArr(bodies.size()); // gdy nie ma kolizji można wyrzucić wyżej
+                calculateVelocitiesThread(indexArr);
+                moveBodies(indexArr);//Brak różnicy
+//                handleInelasticCollisions(indexArr); //Błąd
             }
         }
     }
@@ -102,7 +104,20 @@ public class Sketch extends PApplet {
         text("(-+) scale: " + round(scale * r) / r, textX, textY[6]);
     }
 
-    private void calculateVelocities() {
+    private int[] createBodiesIndexArr(int numOfBodies) {
+        int[] indexArr = new int[numOfThread + 1];
+        int div = numOfBodies / numOfThread;
+        int rest = numOfBodies % numOfThread;
+        for (int i = 1; i <= numOfThread; i++) {
+            indexArr[i] = indexArr[i - 1] + div;
+            if (i <= rest) {
+                indexArr[i]++;
+            }
+        }
+        return indexArr;
+    }
+
+    private void calculateVelocities(int[] indexArr) {
         for (int i = 0; i < bodies.size(); i++) {
             Body body = bodies.get(i);
             body.setAcceleration(new PVector(0, 0, 0));
@@ -123,7 +138,46 @@ public class Sketch extends PApplet {
         }
     }
 
-    private void moveBodies() {
+    private void calculateVelocitiesThread(int[] indexArr) {
+
+        ArrayList<Thread> threadArr = new ArrayList<>();
+        for (int i = 1; i <= numOfThread; i++) {
+            Thread thread = new VelocityThread(bodies, G, SOFTENING, indexArr[i - 1], indexArr[i]);
+            threadArr.add(thread);
+            thread.start();
+        }
+        calculateVelocity(indexArr[numOfThread - 1], indexArr[numOfThread]);
+        try {
+            for (int i = 1; i <= numOfThread; i++) {
+                threadArr.get(i - 1).join();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void calculateVelocity(int startIndex, int endIndex) {
+        for (int i = startIndex; i < endIndex; i++) {
+            Body body = bodies.get(i);
+            body.setAcceleration(new PVector(0, 0, 0));
+
+            for (int j = 0; j < bodies.size(); j++) {
+                Body secBody = bodies.get(j);
+                if (i != j) {
+                    PVector posA = body.getPosition().copy();
+                    PVector posB = secBody.getPosition().copy();
+
+                    float softenedR = sqrt(pow(posA.dist(posB), 2) + pow(SOFTENING, 2));
+                    float force = G * secBody.getMass() / pow(softenedR, 3);
+
+                    PVector acceleration = (posB.sub(posA)).mult(force);
+                    body.getAcceleration().add(acceleration);
+                }
+            }
+        }
+    }
+
+    private void moveBodies(int[] indexArr) {
         for (Body body : bodies) {
             float t = speed / iterationsPerFrame;
 
@@ -134,8 +188,86 @@ public class Sketch extends PApplet {
         }
     }
 
-    private void handleInelasticCollisions() {
+    private void moveBodiesThread(int[] indexArr) {
+        ArrayList<Thread> threadArr = new ArrayList<>();
+        for (int i = 1; i < numOfThread; i++) {
+            Thread thread = new MoveThread(bodies, speed, iterationsPerFrame, indexArr[i - 1], indexArr[i]);
+            threadArr.add(thread);
+            thread.start();
+        }
+        moveBody(indexArr[numOfThread - 1], indexArr[numOfThread]);
+        try {
+            for (int i = 1; i < numOfThread; i++) {
+                threadArr.get(i - 1).join();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void moveBody(int startIndex, int endIndex) {
+        for (int i = startIndex; i < endIndex; i++) {
+            float t = speed / iterationsPerFrame;
+
+            bodies.get(i).getVelocity().add(bodies.get(i).getAcceleration().copy().mult(t));
+            PVector vt = bodies.get(i).getVelocity().copy().mult(t);
+
+            bodies.get(i).getPosition().add(vt);
+
+        }
+    }
+
+
+    private void handleInelasticCollisions(int[] indexArr) {
         for (int i = 0; i < bodies.size(); i++) {
+            for (int j = i + 1; j < bodies.size(); j++) {
+                Body a = bodies.get(i);
+                Body b = bodies.get(j);
+
+                if (a.isRemoved() || b.isRemoved()) {
+                    continue;
+                }
+
+                if (bodies.get(i).getMass() < bodies.get(j).getMass()) {
+                    a = bodies.get(j);
+                    b = bodies.get(i);
+                }
+
+                if (a.getPosition().dist(b.getPosition()) < (a.getRadius() + b.getRadius() / 4)) {
+                    PVector momentumA = a.getVelocity().mult(a.getMass());
+                    PVector momentumB = b.getVelocity().mult(b.getMass());
+
+                    PVector newVelocity = (momentumA.add(momentumB)).div(a.getMass() + b.getMass());
+                    a.setVelocity(newVelocity);
+
+                    a.setMass(a.getMass() + b.getMass());
+                    b.setRemoved(true);
+                }
+            }
+        }
+        bodies.removeIf(Body::isRemoved);
+    }
+
+    private void handleInelasticCollisionsThread(int[] indexArr) { //Wyrzuca dziwny błąd
+        ArrayList<Thread> threadArr = new ArrayList<>();
+        for (int i = 1; i < numOfThread; i++) {
+            Thread thread = new CollisionThread(bodies, indexArr[i - 1], indexArr[i]);
+            threadArr.add(thread);
+            thread.start();
+        }
+        handleColision(indexArr[numOfThread - 1], indexArr[numOfThread]);
+        try {
+            for (int i = 1; i < numOfThread; i++) {
+                threadArr.get(i - 1).join();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void handleColision(int startIndex, int endIndex){
+        for (int i = startIndex; i < endIndex; i++) {
             for (int j = i + 1; j < bodies.size(); j++) {
                 Body a = bodies.get(i);
                 Body b = bodies.get(j);
