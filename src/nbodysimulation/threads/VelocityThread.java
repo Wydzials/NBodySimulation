@@ -1,3 +1,6 @@
+package nbodysimulation.threads;
+
+import nbodysimulation.Body;
 import processing.core.PVector;
 
 import java.util.List;
@@ -13,7 +16,7 @@ public class VelocityThread extends Thread {
     private final int startIndex;
     private final int endIndex;
 
-    public VelocityThread(List<Body> bodies, float G, float SOFTENING, int startIndex, int endIndex){
+    public VelocityThread(List<Body> bodies, float G, float SOFTENING, int startIndex, int endIndex) {
         this.bodies = bodies;
         this.G = G;
         this.SOFTENING = SOFTENING;

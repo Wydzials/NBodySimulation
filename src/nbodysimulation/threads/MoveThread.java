@@ -1,9 +1,9 @@
+package nbodysimulation.threads;
+
+import nbodysimulation.Body;
 import processing.core.PVector;
 
 import java.util.List;
-
-import static java.lang.Math.pow;
-import static java.lang.Math.sqrt;
 
 public class MoveThread extends Thread {
 

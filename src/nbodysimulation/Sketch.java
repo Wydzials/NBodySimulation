@@ -1,11 +1,16 @@
+package nbodysimulation;
+
+import nbodysimulation.threads.CollisionThread;
+import nbodysimulation.threads.MoveThread;
+import nbodysimulation.threads.VelocityThread;
 import processing.core.PApplet;
 import processing.core.PVector;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.IntStream;
-
-import static java.lang.Math.pow;
-import static java.lang.Math.sqrt;
 
 public class Sketch extends PApplet {
     //Liczba wątków z liczbą ciał się nie zgadza
@@ -21,7 +26,7 @@ public class Sketch extends PApplet {
     private float posX = 0;
     private float posY = 0;
     private boolean pause = false;
-    private final int numOfThread = 8;
+    private final int numOfThread = 4;
 
     private boolean drawVelocities = false;
     private boolean drawAccelerations = false;
@@ -38,7 +43,8 @@ public class Sketch extends PApplet {
         textFont(createFont("Ubuntu Mono", 20, true));
 
         BodyCreator creator = new BodyCreator();
-        creator.readFromFile("data/3-bodies.txt");
+        //creator.readFromFile("data/3-bodies.txt");
+        creator.generateRandom(200);
 
         bodies.addAll(creator.getBodies());
     }
@@ -80,7 +86,7 @@ public class Sketch extends PApplet {
                 int[] indexArr = createBodiesIndexArr(bodies.size()); // gdy nie ma kolizji można wyrzucić wyżej
                 calculateVelocitiesThread(indexArr);
                 moveBodies(indexArr);//Brak różnicy
-//                handleInelasticCollisions(indexArr); //Błąd
+                handleInelasticCollisionsThread(indexArr);
             }
         }
     }
@@ -263,10 +269,11 @@ public class Sketch extends PApplet {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        bodies.removeIf(Body::isRemoved);
     }
 
 
-    private void handleColision(int startIndex, int endIndex){
+    private void handleColision(int startIndex, int endIndex) {
         for (int i = startIndex; i < endIndex; i++) {
             for (int j = i + 1; j < bodies.size(); j++) {
                 Body a = bodies.get(i);
@@ -293,7 +300,6 @@ public class Sketch extends PApplet {
                 }
             }
         }
-        bodies.removeIf(Body::isRemoved);
     }
 
     private void handlePressedKeys() {
