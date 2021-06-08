@@ -1,0 +1,9 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="NBodySimulation:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/NBodySimulation_jar</output-path>
+    <root id="archive" name="NBodySimulation.jar">
+      <element id="module-output" name="NBodySimulation" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../libraries/processing-core.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

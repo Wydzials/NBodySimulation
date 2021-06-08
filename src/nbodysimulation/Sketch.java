@@ -43,8 +43,8 @@ public class Sketch extends PApplet {
         textFont(createFont("Ubuntu Mono", 20, true));
 
         BodyCreator creator = new BodyCreator();
-        creator.readFromFile("data/3-bodies.txt");
-        //creator.generateRandom(700);
+        //creator.readFromFile("data/3-bodies.txt");
+        creator.generateRandom(700);
 
         bodies.addAll(creator.getBodies());
     }
@@ -229,7 +229,7 @@ public class Sketch extends PApplet {
         if (pressedKeys.contains('-')) scale /= 1.02;
 
         if (pressedKeys.contains(']')) speed += 0.1f;
-        if (pressedKeys.contains('[')) speed = max(speed -= 1.1f, 0.1f);
+        if (pressedKeys.contains('[')) speed = max(speed -= 0.1f, 0.1f);
 
         if (pressedKeys.contains('w')) posY += 10 / scale;
         if (pressedKeys.contains('s')) posY -= 10 / scale;

@@ -56,7 +56,6 @@ public class BodyCreator {
         for (int i = 0; i < n; i++) {
             PVector position = PVector.random2D().mult(sketch.random(10, 1500));
             PVector velocity = PVector.random2D().mult(sketch.random(30) / 10);
-            System.out.println(position + " " + velocity);
             bodies.add(new Body(position, velocity, sketch.random(50, 1000)));
         }
     }
